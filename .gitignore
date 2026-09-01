@@ -5,3 +5,4 @@ venv/
 repo_graph.json
 .DS_Store
 chroma_db/
+*.patch
