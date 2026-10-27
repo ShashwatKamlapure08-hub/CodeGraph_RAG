@@ -9,28 +9,19 @@ class PatchSynthesizer:
 
     def generate_patch(self, bug_description: str) -> Dict[str, Any]:
         """Queries the agent for a bug fix and formats the response into a unified git diff."""
-        
         context = self.agent.retriever.graph_augmented_search(bug_description, top_k=2)
         
-        prompt = f"""Bug / Improvement Request: {bug_description}
-
-Instructions:
-1. Explain the bug or fix.
-2. Output an EXACT git diff patch inside a ```diff code block.
-
-Example output structure:
-```diff
---- a/code_parser.py
-+++ b/code_parser.py
-@@ -10,3 +10,3 @@
--    docstring = ast.get_docstring(node)
-+    docstring = ast.get_docstring(node) or ""
-```"""
+        prompt = (
+            f"Bug / Improvement Request: {bug_description}\n\n"
+            "CRITICAL INSTRUCTIONS:\n"
+            "1. Provide a brief explanation of the fix.\n"
+            "2. YOU MUST INCLUDE a valid git diff block enclosed in standard markdown diff code fences."
+        )
 
         raw_response = self.agent.generate_direct_response(prompt, context)
         
-        # Extract diff block
-        diff_match = re.search(r"```diff\n(.*?)\n```", raw_response, re.DOTALL)
+        # Extract diff block using flexible regex matching
+        diff_match = re.search(r"```(?:diff)?\n(.*?)\n```", raw_response, re.DOTALL)
         patch_code = diff_match.group(1) if diff_match else ""
 
         return {
@@ -64,4 +55,6 @@ if __name__ == "__main__":
     
     if result["has_valid_patch"]:
         synthesizer.save_patch_file(result["patch_code"])
-        print("\nPatch saved successfully to 'fix.patch'.")
+        print("\nPatch saved successfully to 'fix.patch'. Run 'git apply fix.patch' to test.")
+    else:
+        print("\nAgent provided reasoning, but no valid ```diff ``` block was formatted.")
